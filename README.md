@@ -4,8 +4,9 @@
 
 **A fast, elegant, and distraction-free standalone browser extension (Manifest V3) for instant English-to-Russian translation on any webpage.**
 
+[![Version](https://img.shields.io/badge/Version-1.3.0-blueviolet.svg?style=flat-square)](manifest.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
-[![Manifest V3](https://img.shields.io/badge/Extension-Manifest%20V3-blueviolet.svg?style=flat-square)](manifest.json)
+[![Manifest V3](https://img.shields.io/badge/Extension-Manifest%20V3-indigo.svg?style=flat-square)](manifest.json)
 [![Supported Browsers](https://img.shields.io/badge/Browser-Brave%20%7C%20Chrome%20%7C%20Edge%20%7C%20Firefox-purple.svg?style=flat-square)]()
 [![Author](https://img.shields.io/badge/Author-Pheromone-success.svg?style=flat-square)](https://github.com/PheromoneItsMe)
 
@@ -20,12 +21,12 @@
 # English Version
 
 > [!NOTE]
-> **Standalone Extension**: Quick Web Translator is built as a native **Manifest V3 Browser Extension**. It runs directly in Brave, Chrome, Edge, and other Chromium browsers without requiring any userscript manager.
+> **Standalone Extension (v1.3.0)**: Quick Web Translator is built as a native **Manifest V3 Browser Extension**. It runs directly in Brave, Chrome, Edge, and other Chromium-based browsers without requiring any userscript manager.
 
 ## ✨ Features
 
 - ⚡ **Instant Translation**: Highlight or select any English word, phrase, or multi-line paragraph—clean Russian translation appears immediately.
-- 🌐 **Full Single Page Application (SPA) Support**: Works seamlessly on dynamic platforms including **YouTube** (video descriptions, live chat, comments), **Google Gemini**, **ChatGPT**, Reddit, and complex Web Components.
+- 🌐 **Full Single Page Application (SPA) Support**: Works seamlessly on dynamic platforms including **YouTube** (video descriptions, live chat, comments), **Google Gemini**, **ChatGPT**, Reddit, dynamic wikis, and complex Web Components.
 - 🪟 **Draggable Floating Window**: Grab the header and reposition the translation popup anywhere across your screen without blocking text underneath.
 - 📐 **Resizable (Windows-style)**: Resize freely by dragging any edge or the bottom-right corner to view long paragraphs comfortably.
 - 🔊 **Audio Pronunciation with Play / Stop**:
@@ -43,7 +44,7 @@
 
 ---
 
-## 🚀 Installation Guide
+## 🛠️ Installation Guide
 
 Installing the extension in Brave, Chrome, or Edge takes less than 15 seconds:
 
@@ -70,14 +71,15 @@ git clone https://github.com/PheromoneItsMe/quick-web-translator.git
 ```mermaid
 flowchart LR
     A[User Selects Text] --> B[Content Script Detects Selection]
-    B --> C[Message to Background Service Worker]
-    C --> D[Google Translate API Fetch]
-    D --> E[Parse & Clean Translation Response]
-    E --> F[Render in Isolated Shadow DOM UI]
+    B --> C[Occlusion & Scroll Position Calculation]
+    C --> D[Message to Background Service Worker]
+    D --> E[Google Translate API Fetch + Auto-Retry]
+    E --> F[Parse & Clean Translation Response]
+    F --> G[Render in Isolated Shadow DOM UI]
 ```
 
-1. **Native Background Service Worker (`background.js`)**: Executes translation requests in the background, bypassing all webpage CORS and Content Security Policy (CSP) restrictions.
-2. **Encapsulated Content Script (`content.js`)**: Injected into web pages, listening for text selections and managing the Shadow DOM UI.
+1. **Native Background Service Worker (`background.js`)**: Executes translation requests in the background, bypassing all webpage CORS and Content Security Policy (CSP) restrictions, and implements smart fallback for mixed-language content.
+2. **Encapsulated Content Script (`content.js`)**: Injected into web pages, listening for text selections, managing occlusion detection, dynamic real-time positioning, and rendering the Shadow DOM UI.
 3. **Settings Management (`popup.html` / `popup.js`)**: Allows toggling trigger modes with settings synced via `chrome.storage`.
 
 ---
@@ -95,15 +97,28 @@ flowchart LR
 
 ---
 
+## 🚀 What's New in v1.3.0
+
+- 🧠 **Smart Mixed-Language Translation Auto-Correction**: Fixed an issue where selecting mixed text (such as English headlines accompanied by non-English source citations or metadata) caused the translation engine's auto-detector to misclassify the text and return English words untranslated. The background service worker now automatically detects and re-translates the English content seamlessly.
+- 🎯 **Real-Time Scroll & Window Resize Anchoring**: The floating trigger button now dynamically tracks the exact on-screen position of selected text in real time across the page and scrollable containers (`window.scroll`, `overflow: auto/scroll` divs) using `requestAnimationFrame`.
+- 🛡️ **Universal Occlusion & Container Clipping Detection**:
+  - Automatically detects when selected text scrolls behind fixed/sticky navigation bars, toolbars, or headers (such as YouTube's search bar `#masthead` or Google Gemini's bottom `<input-container>` prompt area) using multi-point DOM hit-testing (`document.elementsFromPoint`).
+  - Gracefully hides the trigger button when occluded or clipped by parent container boundaries, preventing visual overlap with website controls.
+  - Automatically restores button visibility the instant text scrolls back into visible view.
+- 🔄 **Adaptive Trigger Button Placement**: Dynamically checks clearance and automatically flips the trigger button above or below the selection depending on available viewport space and nearby sticky headers.
+- ⚡ **Optimized Lifecycle & Selection Cleanup**: Immediate button dismissal upon clearing selections or clicking outside, preventing lingering UI artifacts.
+
+---
+
 # Russian Version / Русская версия
 
 > [!NOTE]
-> **Автономное расширение**: Quick Web Translator создан как нативное **браузерное расширение (Manifest V3)**. Оно работает напрямую в Brave, Chrome, Edge и других браузерах и **не требует** сторонних менеджеров скриптов (Tampermonkey).
+> **Автономное расширение (v1.3.0)**: Quick Web Translator создан как нативное **браузерное расширение (Manifest V3)**. Оно работает напрямую в Brave, Chrome, Edge и других браузерах и **не требует** сторонних менеджеров скриптов (Tampermonkey).
 
 ## ✨ Возможности
 
 - ⚡ **Мгновенный перевод**: Выделите любое английское слово, фразу или длинный абзац — перевод на русский появится мгновенно рядом с курсором.
-- 🌐 **Полная совместимость с SPA и нейросетями**: Безупречно работает на динамических сайтах, включая **YouTube** (комментарии, описания, чат), **Google Gemini**, **ChatGPT**, Reddit и веб-компоненты.
+- 🌐 **Полная совместимость с SPA и нейросетями**: Безупречно работает на динамических сайтах, включая **YouTube** (комментарии, описания, чат), **Google Gemini**, **ChatGPT**, Reddit, вики и веб-компоненты.
 - 🪟 **Перемещение окна (Drag & Drop)**: Зажмите заголовок окна и перемещайте его в любое удобное место экрана.
 - 📐 **Изменение размера (Resize как в Windows)**: Свободно меняйте ширину и высоту окна за границы или правый нижний угол.
 - 🔊 **Озвучка с управлением Play / Stop**:
@@ -121,7 +136,7 @@ flowchart LR
 
 ---
 
-## 🚀 Инструкция по установке
+## 🛠️ Инструкция по установке
 
 Установка расширения в Brave, Chrome или Edge занимает менее 15 секунд:
 
@@ -153,6 +168,19 @@ git clone https://github.com/PheromoneItsMe/quick-web-translator.git
 | **Озвучить / Остановить** | Нажмите 🔊 для старта, нажмите ⏹️ для остановки |
 | **Скопировать перевод** | Нажмите иконку копирования 📋 в шапке окна |
 | **Закрыть окно** | Кликните в любое место вне окна или нажмите <kbd>Esc</kbd> |
+
+---
+
+## 🚀 Что нового в версии 1.3.0
+
+- 🧠 **Умная автокоррекция смешанного текста**: Исправлен баг, когда при выделении английского текста со сносками, цитатами или примечаниями на другом языке встроенный автоопределитель языка определял весь фрагмент как русский и возвращал английские слова без перевода. Сервисный воркер теперь автоматически распознаёт такие случаи и повторно запрашивает перевод с английского на русский.
+- 🎯 **Синхронное отслеживание прокрутки и ресайза (Scroll Tracking)**: Плавающая кнопка-триггер теперь плавно и точно в реальном времени следует за выделенным текстом при скролле страницы или внутренних прокручиваемых блоков (`overflow: auto/scroll`) с использованием `requestAnimationFrame`.
+- 🛡️ **Универсальная система защиты от перекрытий (Occlusion & Clipping Detection)**:
+  - Автоматически распознает, когда выделенный текст уходит под фиксированные шапки, панели навигации или тулбары (например, поле ввода сообщений в Google Gemini `<input-container>` или верхнюю панель поиска YouTube `#masthead`) с помощью попиксельного hit-тестирования (`document.elementsFromPoint`).
+  - Аккуратно скрывает кнопку, если текст перекрыт сторонними панелями или вышел за границы родительского скролл-контейнера, исключая наслоение кнопки на элементы управления сайта.
+  - Мгновенно восстанавливает видимость кнопки, как только текст возвращается в видимую область.
+- 🔄 **Адаптивное размещение кнопки**: Автоматически проверяет доступное свободное пространство и переворачивает кнопку вверх (`top - 28px`) или вниз (`bottom + 6px`), чтобы она не вылезала за экран и не попадала под верхние фиксированные панели.
+- ⚡ **Оптимизация жизненного цикла выделения**: Мгновенное удаление кнопки при снятии выделения или клике в сторону, исключающее появление остаточных элементов интерфейса.
 
 ---
 

@@ -160,6 +160,13 @@
                 cursor: default;
             }
 
+            .qwt-btn-wrap {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
             .qwt-btn {
                 background: transparent;
                 border: none;
@@ -170,12 +177,16 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.15s ease;
+                transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
             }
 
             .qwt-btn:hover {
                 background: rgba(255, 255, 255, 0.08);
                 color: #f1f5f9;
+            }
+
+            .qwt-btn:active {
+                transform: scale(0.93);
             }
 
             .qwt-btn svg {
@@ -186,18 +197,126 @@
                 fill: none;
             }
 
-            .qwt-btn.active {
-                color: #818cf8;
-            }
-
+            /* Speaker / Playback states */
             .qwt-btn.playing {
-                color: #f43f5e;
-                background: rgba(244, 63, 94, 0.12);
+                color: #f43f5e !important;
+                background: rgba(244, 63, 94, 0.14) !important;
             }
 
             .qwt-btn.playing svg {
                 fill: currentColor;
                 stroke: none;
+            }
+
+            /* Copy Button Styles & Micro-Animation */
+            .qwt-copy-svg {
+                width: 14px;
+                height: 14px;
+                overflow: visible;
+            }
+
+            .qwt-copy-front, .qwt-copy-back {
+                transform-origin: center center;
+            }
+
+            .qwt-copy-btn.copied {
+                color: #818cf8 !important;
+                background: rgba(129, 140, 248, 0.14) !important;
+            }
+
+            .qwt-copy-btn.copied .qwt-copy-front {
+                animation: qwtCopyFrontSwap 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            }
+
+            .qwt-copy-btn.copied .qwt-copy-back {
+                animation: qwtCopyBackSwap 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            }
+
+            @keyframes qwtCopyFrontSwap {
+                0% {
+                    transform: translate(0, 0) scale(1);
+                }
+                45% {
+                    transform: translate(-5px, -5px) scale(0.88);
+                }
+                75% {
+                    transform: translate(1px, 1px) scale(1.06);
+                }
+                100% {
+                    transform: translate(0, 0) scale(1);
+                }
+            }
+
+            @keyframes qwtCopyBackSwap {
+                0% {
+                    transform: translate(0, 0) scale(1);
+                }
+                45% {
+                    transform: translate(5px, 5px) scale(1.12);
+                }
+                75% {
+                    transform: translate(-1px, -1px) scale(0.94);
+                }
+                100% {
+                    transform: translate(0, 0) scale(1);
+                }
+            }
+
+            /* Settings / Mode Gear Animation (Smooth 45deg rotation strictly around center) */
+            .qwt-mode-btn svg {
+                transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
+                transform-origin: center center;
+            }
+
+            .qwt-mode-btn.active {
+                color: #818cf8 !important;
+                background: rgba(129, 140, 248, 0.14) !important;
+            }
+
+            .qwt-mode-btn.active svg {
+                transform: rotate(45deg);
+            }
+
+            .qwt-mode-btn:not(.active) svg {
+                transform: rotate(0deg);
+            }
+
+            /* Tooltip Pill directly below action buttons inside popup boundaries */
+            .qwt-btn-tooltip {
+                position: absolute;
+                top: calc(100% + 7px);
+                right: -2px;
+                left: auto;
+                transform: translateY(-4px) scale(0.9);
+                background: #1e1b4b;
+                border: 1px solid rgba(129, 140, 248, 0.55);
+                color: #e0e7ff;
+                font-size: 10.5px;
+                font-weight: 600;
+                letter-spacing: 0.25px;
+                padding: 3px 8px;
+                border-radius: 6px;
+                white-space: nowrap;
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7), 0 0 12px rgba(129, 140, 248, 0.35);
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.16s ease, transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+                z-index: 10000;
+            }
+
+            .qwt-btn-tooltip::after {
+                content: '';
+                position: absolute;
+                bottom: 100%;
+                right: 9px;
+                border-width: 4px;
+                border-style: solid;
+                border-color: transparent transparent #1e1b4b transparent;
+            }
+
+            .qwt-btn-tooltip.visible {
+                opacity: 1;
+                transform: translateY(0) scale(1);
             }
 
             .qwt-body {
@@ -283,22 +402,6 @@
                 to { transform: scale(1); opacity: 1; }
             }
 
-            .qwt-toast {
-                position: absolute;
-                bottom: -22px;
-                right: 4px;
-                background: rgba(15, 23, 42, 0.9);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                color: #38bdf8;
-                font-size: 10.5px;
-                font-weight: 500;
-                padding: 2px 8px;
-                border-radius: 6px;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-                animation: qwtFadeIn 0.12s ease;
-                pointer-events: none;
-            }
-
             .qwt-popup *::-webkit-scrollbar {
                 width: 4px;
             }
@@ -317,7 +420,7 @@
         translate: `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>`,
         speaker: `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`,
         stop: `<svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" stroke="none"></rect></svg>`,
-        copy: `<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
+        copy: `<svg viewBox="0 0 24 24" class="qwt-copy-svg"><rect class="qwt-copy-back" x="4" y="4" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2" fill="none"></rect><rect class="qwt-copy-front" x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2" fill="none"></rect></svg>`,
         close: `<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
         settings: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`
     };
@@ -510,6 +613,7 @@
             left = window.innerWidth - estimatedWidth - padding;
         }
         if (left < padding) left = padding;
+        if (top < 28) top = 28;
 
         return { left: Math.round(left), top: Math.round(top) };
     }
@@ -520,7 +624,7 @@
         let initialLeft = 0, initialTop = 0;
 
         headerEl.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.qwt-actions') || e.target.closest('.qwt-btn')) return;
+            if (e.target.closest('.qwt-actions') || e.target.closest('.qwt-btn') || e.target.closest('.qwt-btn-wrap')) return;
 
             isDragging = true;
             startX = e.clientX;
@@ -569,7 +673,13 @@
         popupElement.className = 'qwt-popup';
         popupOpenedTimestamp = Date.now();
 
-        const coords = calculatePopupPosition(rect);
+        let latestTranslationText = '';
+        let copyTimeout = null;
+        let modeTimeout = null;
+
+        const liveData = extractSelectionData();
+        const effectiveRect = (liveData && liveData.rect) ? liveData.rect : (triggerBtnElement ? triggerBtnElement.getBoundingClientRect() : rect);
+        const coords = calculatePopupPosition(effectiveRect);
         popupElement.style.left = `${coords.left}px`;
         popupElement.style.top = `${coords.top}px`;
 
@@ -580,10 +690,20 @@
                     <span>Translation</span>
                 </div>
                 <div class="qwt-actions">
-                    <button class="qwt-btn qwt-speak-btn" title="Listen to pronunciation">${ICONS.speaker}</button>
-                    <button class="qwt-btn qwt-copy-btn" title="Copy translation">${ICONS.copy}</button>
-                    <button class="qwt-btn qwt-mode-btn ${CONFIG.showTriggerButton ? 'active' : ''}" title="${CONFIG.showTriggerButton ? 'Mode: Trigger button' : 'Mode: Auto-translate'}">${ICONS.settings}</button>
-                    <button class="qwt-btn qwt-close-btn" title="Close">${ICONS.close}</button>
+                    <div class="qwt-btn-wrap">
+                        <button class="qwt-btn qwt-speak-btn" title="Listen to pronunciation">${ICONS.speaker}</button>
+                    </div>
+                    <div class="qwt-btn-wrap">
+                        <button class="qwt-btn qwt-copy-btn" title="Copy translation">${ICONS.copy}</button>
+                        <span class="qwt-btn-tooltip qwt-copy-tooltip">Copied!</span>
+                    </div>
+                    <div class="qwt-btn-wrap">
+                        <button class="qwt-btn qwt-mode-btn ${CONFIG.showTriggerButton ? 'active' : ''}" title="${CONFIG.showTriggerButton ? 'Mode: Trigger button' : 'Mode: Auto-translate'}">${ICONS.settings}</button>
+                        <span class="qwt-btn-tooltip qwt-mode-tooltip">${CONFIG.showTriggerButton ? 'Trigger button' : 'Auto-translate'}</span>
+                    </div>
+                    <div class="qwt-btn-wrap">
+                        <button class="qwt-btn qwt-close-btn" title="Close">${ICONS.close}</button>
+                    </div>
                 </div>
             </div>
             <div class="qwt-body">
@@ -601,8 +721,10 @@
 
         const speakBtn = popupElement.querySelector('.qwt-speak-btn');
         const copyBtn = popupElement.querySelector('.qwt-copy-btn');
+        const copyTooltip = popupElement.querySelector('.qwt-copy-tooltip');
         const closeBtn = popupElement.querySelector('.qwt-close-btn');
         const modeBtn = popupElement.querySelector('.qwt-mode-btn');
+        const modeTooltip = popupElement.querySelector('.qwt-mode-tooltip');
 
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -614,6 +736,40 @@
             toggleSpeech(text);
         });
 
+        // Copy button with interactive swap animation and "Copied!" tooltip
+        copyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const textToCopy = latestTranslationText || text;
+            if (!textToCopy) return;
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                copyBtn.classList.remove('copied');
+                // Trigger reflow to restart CSS animation cleanly if clicked repeatedly
+                void copyBtn.offsetWidth;
+                copyBtn.classList.add('copied');
+
+                if (copyTooltip) {
+                    copyTooltip.textContent = 'Copied!';
+                    if (copyTimeout) clearTimeout(copyTimeout);
+                    copyTooltip.classList.add('visible');
+                    copyTimeout = setTimeout(() => {
+                        copyTooltip.classList.remove('visible');
+                        copyBtn.classList.remove('copied');
+                    }, 1300);
+                }
+            }).catch(() => {
+                if (copyTooltip) {
+                    copyTooltip.textContent = 'Copy failed';
+                    if (copyTimeout) clearTimeout(copyTimeout);
+                    copyTooltip.classList.add('visible');
+                    copyTimeout = setTimeout(() => {
+                        copyTooltip.classList.remove('visible');
+                    }, 1300);
+                }
+            });
+        });
+
+        // Mode switch (Settings Gear) with smooth 90° rotation and status tooltip
         modeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             CONFIG.showTriggerButton = !CONFIG.showTriggerButton;
@@ -621,13 +777,23 @@
                 chrome.storage.sync.set({ showTriggerButton: CONFIG.showTriggerButton });
             }
             modeBtn.classList.toggle('active', CONFIG.showTriggerButton);
-            modeBtn.title = CONFIG.showTriggerButton ? 'Mode: Trigger button' : 'Mode: Auto-translate';
-            showToast(CONFIG.showTriggerButton ? 'Mode: Trigger button' : 'Mode: Auto-translate');
+            const titleStr = CONFIG.showTriggerButton ? 'Mode: Trigger button' : 'Mode: Auto-translate';
+            modeBtn.title = titleStr;
+
+            if (modeTooltip) {
+                modeTooltip.textContent = CONFIG.showTriggerButton ? 'Trigger button' : 'Auto-translate';
+                if (modeTimeout) clearTimeout(modeTimeout);
+                modeTooltip.classList.add('visible');
+                modeTimeout = setTimeout(() => {
+                    modeTooltip.classList.remove('visible');
+                }, 1300);
+            }
         });
 
         requestTranslation(text)
             .then(result => {
                 if (!popupElement) return;
+                latestTranslationText = (result && result.translation) ? result.translation : '';
                 renderTranslationResult(result);
             })
             .catch(err => {
@@ -647,31 +813,169 @@
         body.innerHTML = `
             <div class="qwt-translation">${escapeHtml(result.translation || '—')}</div>
         `;
-
-        const copyBtn = popupElement.querySelector('.qwt-copy-btn');
-        if (copyBtn) {
-            copyBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                navigator.clipboard.writeText(result.translation).then(() => {
-                    showToast('Copied!');
-                }).catch(() => {
-                    showToast('Copy failed');
-                });
-            });
-        }
     }
 
-    function showToast(msg) {
-        if (!popupElement) return;
-        const oldToast = popupElement.querySelector('.qwt-toast');
-        if (oldToast) oldToast.remove();
+    function isOurElement(el) {
+        if (!el) return false;
+        if (el === hostElement || el === shadowRoot || el === popupElement || el === triggerBtnElement) return true;
+        if (hostElement && hostElement.contains(el)) return true;
+        if (shadowRoot && shadowRoot.contains(el)) return true;
+        return false;
+    }
 
-        const toast = document.createElement('div');
-        toast.className = 'qwt-toast';
-        toast.textContent = msg;
-        popupElement.appendChild(toast);
+    function isPointOccluded(x, y, container) {
+        if (x < 0 || x > window.innerWidth || y < 0 || y > window.innerHeight) {
+            return true;
+        }
 
-        setTimeout(() => toast.remove(), 1600);
+        let elements = [];
+        try {
+            elements = document.elementsFromPoint(x, y);
+        } catch (e) {
+            return false;
+        }
+
+        if (!elements || elements.length === 0) return false;
+
+        let topEl = null;
+        for (let i = 0; i < elements.length; i++) {
+            const el = elements[i];
+            if (!isOurElement(el)) {
+                topEl = el;
+                break;
+            }
+        }
+
+        if (!topEl) return false;
+
+        if (container) {
+            if (topEl === container || container.contains(topEl) || topEl.contains(container)) {
+                return false;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    function isSelectionOccluded(range, container, rect) {
+        if (!rect) return true;
+
+        // 1. Basic viewport bounds check
+        if (rect.bottom <= 0 || rect.top >= window.innerHeight || rect.right <= 0 || rect.left >= window.innerWidth) {
+            return true;
+        }
+
+        // 2. Check clipping bounds of all parent scrollable containers (overflow: hidden/auto/scroll/clip)
+        if (container) {
+            let current = container.parentElement;
+            while (current && current !== document.body && current !== document.documentElement) {
+                const style = window.getComputedStyle(current);
+                const overflowY = style.overflowY;
+                const overflowX = style.overflowX;
+                if (overflowY === 'hidden' || overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'clip' ||
+                    overflowX === 'hidden' || overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'clip') {
+                    const parentRect = current.getBoundingClientRect();
+                    // If selection is fully scrolled out of this scrollable parent container:
+                    if (rect.bottom <= parentRect.top + 1 || rect.top >= parentRect.bottom - 1 ||
+                        rect.right <= parentRect.left + 1 || rect.left >= parentRect.right - 1) {
+                        return true;
+                    }
+                }
+                current = current.parentElement;
+            }
+        }
+
+        // 3. Hit-test sampling across the selection range using elementsFromPoint
+        if (range && container) {
+            const clientRects = range.getClientRects();
+            if (clientRects.length > 0) {
+                let anySampleVisible = false;
+                for (let i = 0; i < clientRects.length; i++) {
+                    const r = clientRects[i];
+                    if (r.width === 0 || r.height === 0) continue;
+
+                    const samplePoints = [
+                        { x: r.left + Math.min(10, r.width / 2), y: r.top + r.height / 2 },
+                        { x: (r.left + r.right) / 2, y: r.top + r.height / 2 },
+                        { x: r.right - Math.min(10, r.width / 2), y: r.top + r.height / 2 }
+                    ];
+
+                    for (const pt of samplePoints) {
+                        if (pt.x >= 0 && pt.x <= window.innerWidth && pt.y >= 0 && pt.y <= window.innerHeight) {
+                            if (!isPointOccluded(pt.x, pt.y, container)) {
+                                anySampleVisible = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (anySampleVisible) break;
+                }
+
+                if (!anySampleVisible) {
+                    return true;
+                }
+            } else {
+                const cx = (rect.left + rect.right) / 2;
+                const cy = (rect.top + rect.bottom) / 2;
+                if (isPointOccluded(cx, cy, container)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    function updateTriggerButtonPosition(passedRect) {
+        if (!triggerBtnElement) return;
+
+        const data = extractSelectionData();
+        if (!data || !data.text) {
+            triggerBtnElement.style.display = 'none';
+            return;
+        }
+
+        const rect = data.rect;
+        const container = data.container;
+        const range = data.range;
+
+        // Check if the selected text is occluded by sticky/fixed headers, bottom bars (e.g. Gemini input, YouTube masthead), or scroll container bounds
+        if (isSelectionOccluded(range, container, rect)) {
+            triggerBtnElement.style.display = 'none';
+            return;
+        }
+
+        // Calculate preferred position
+        let left = (typeof rect.right === 'number') ? rect.right + 4 : lastPointerPos.x + 8;
+        let top = (typeof rect.top === 'number') ? rect.top - 28 : lastPointerPos.y - 28;
+
+        // If placing above would hit top screen edge or is occluded by a top header/bar, place below
+        if (top < 8 || isPointOccluded(left + 13, top + 13, container)) {
+            top = (typeof rect.bottom === 'number') ? rect.bottom + 6 : lastPointerPos.y + 12;
+        }
+
+        // If placing below is ALSO occluded (e.g. text is near a bottom bar), check if top was better
+        if (isPointOccluded(left + 13, top + 13, container)) {
+            const altTop = (typeof rect.top === 'number') ? rect.top - 28 : top;
+            if (!isPointOccluded(left + 13, altTop + 13, container) && altTop >= 8) {
+                top = altTop;
+            } else {
+                // Both button positions are occluded by fixed/sticky elements
+                triggerBtnElement.style.display = 'none';
+                return;
+            }
+        }
+
+        // Clamp button within viewport screen
+        if (left + 30 > window.innerWidth) left = window.innerWidth - 34;
+        if (left < 6) left = 6;
+        if (top < 6) top = 6;
+        if (top + 30 > window.innerHeight) top = window.innerHeight - 34;
+
+        triggerBtnElement.style.display = 'flex';
+        triggerBtnElement.style.left = `${Math.round(left)}px`;
+        triggerBtnElement.style.top = `${Math.round(top)}px`;
     }
 
     function showTriggerButton(rect, text) {
@@ -684,16 +988,20 @@
         triggerBtnElement.title = 'Translate selected text';
         triggerBtnElement.innerHTML = ICONS.translate;
 
-        let left = (rect && typeof rect.right === 'number') ? rect.right + 4 : lastPointerPos.x + 8;
-        let top = (rect && typeof rect.top === 'number') ? rect.top - 28 : lastPointerPos.y - 28;
+        updateTriggerButtonPosition(rect);
 
-        if (top < 10) top = (rect && typeof rect.bottom === 'number') ? rect.bottom + 6 : lastPointerPos.y + 12;
-        if (left + 30 > window.innerWidth) left = window.innerWidth - 34;
+        triggerBtnElement.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
 
-        triggerBtnElement.style.left = `${left}px`;
-        triggerBtnElement.style.top = `${top}px`;
+        triggerBtnElement.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
 
         triggerBtnElement.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
             showPopup(rect, text);
         });
@@ -736,17 +1044,24 @@
     function extractSelectionData() {
         let text = '';
         let rect = null;
+        let range = null;
+        let container = null;
 
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed) {
             text = sel.toString().trim();
             if (text && sel.rangeCount > 0) {
                 try {
-                    const range = sel.getRangeAt(0);
+                    range = sel.getRangeAt(0);
                     rect = range.getBoundingClientRect();
                     if (rect.width === 0 && rect.height === 0) {
                         const rects = range.getClientRects();
                         if (rects.length > 0) rect = rects[0];
+                    }
+                    if (range.commonAncestorContainer) {
+                        container = range.commonAncestorContainer.nodeType === 1
+                            ? range.commonAncestorContainer
+                            : range.commonAncestorContainer.parentElement;
                     }
                 } catch (e) {}
             }
@@ -767,14 +1082,21 @@
             };
         }
 
-        return { text, rect };
+        return { text, rect, range, container };
     }
 
     function handleSelection() {
         const data = extractSelectionData();
-        if (!data || !data.text) return;
+        if (!data || !data.text) {
+            // When text is deselected / selection is collapsed, remove the trigger button immediately
+            if (!popupElement) {
+                hideTriggerButton();
+                lastHandledText = '';
+            }
+            return;
+        }
 
-        if (data.text === lastHandledText && popupElement) return;
+        if (data.text === lastHandledText && (popupElement || triggerBtnElement)) return;
         lastHandledText = data.text;
 
         if (CONFIG.showTriggerButton) {
@@ -808,7 +1130,7 @@
         if (shadowRoot && e.composedPath && e.composedPath().some(el => el === shadowRoot || el === hostElement)) {
             return;
         }
-        queueSelectionCheck(30);
+        queueSelectionCheck(20);
     }, { capture: true, passive: true });
 
     document.addEventListener('pointerup', (e) => {
@@ -816,34 +1138,40 @@
         if (shadowRoot && e.composedPath && e.composedPath().some(el => el === shadowRoot || el === hostElement)) {
             return;
         }
-        queueSelectionCheck(30);
+        queueSelectionCheck(20);
     }, { capture: true, passive: true });
 
     document.addEventListener('keyup', (e) => {
         if (e.key === 'Shift' || e.key.startsWith('Arrow') || (e.ctrlKey && e.key.toLowerCase() === 'a')) {
-            queueSelectionCheck(50);
+            queueSelectionCheck(40);
         }
     }, { capture: true, passive: true });
 
     document.addEventListener('selectionchange', () => {
-        queueSelectionCheck(80);
+        queueSelectionCheck(40);
     }, { capture: true, passive: true });
 
-    // Dismiss popup on outside click
+    // Dismiss popup and floating trigger button on outside click
     document.addEventListener('mousedown', (e) => {
         updatePointerPos(e);
-        if (shadowRoot && popupElement) {
+        const path = (e.composedPath && e.composedPath()) || [];
+        const isInsideOurUi = path.some(el => el === popupElement || el === triggerBtnElement || el === shadowRoot || el === hostElement);
+
+        if (isInsideOurUi) return;
+
+        // Dismiss floating trigger button when clicking anywhere outside
+        if (triggerBtnElement) {
+            hideTriggerButton();
+            lastHandledText = '';
+        }
+
+        // Dismiss popup when clicking outside (with debounce guard for newly opened popups)
+        if (popupElement) {
             if (Date.now() - popupOpenedTimestamp < 250) {
                 return;
             }
-
-            const path = e.composedPath ? e.composedPath() : [];
-            const isInsideOurUi = path.some(el => el === popupElement || el === triggerBtnElement || el === shadowRoot || el === hostElement);
-            if (!isInsideOurUi) {
-                hidePopup();
-                hideTriggerButton();
-                lastHandledText = '';
-            }
+            hidePopup();
+            lastHandledText = '';
         }
     }, { capture: true, passive: true });
 
@@ -855,5 +1183,18 @@
             lastHandledText = '';
         }
     }, { capture: true, passive: true });
+
+    // Track scroll and resize in real-time across ALL scrollable elements on the page
+    let scrollRaf = null;
+    const handleScrollOrResize = () => {
+        if (!triggerBtnElement) return;
+        if (scrollRaf) cancelAnimationFrame(scrollRaf);
+        scrollRaf = requestAnimationFrame(() => {
+            updateTriggerButtonPosition();
+        });
+    };
+
+    window.addEventListener('scroll', handleScrollOrResize, { capture: true, passive: true });
+    window.addEventListener('resize', handleScrollOrResize, { capture: true, passive: true });
 
 })();
