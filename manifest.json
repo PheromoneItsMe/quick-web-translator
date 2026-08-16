@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Quick Web Translator (En -> Ru)",
+  "version": "1.2.0",
+  "description": "Instant English-to-Russian translation of selected text with audio pronunciation, resizable window, and dark theme for Brave and Chrome.",
+  "author": "Pheromone",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://translate.googleapis.com/*",
+    "https://translate.google.com/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Quick Web Translator Settings"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

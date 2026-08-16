@@ -1,59 +1,71 @@
-// ==UserScript==
-// @name         Quick Web Translator (En -> Ru)
-// @namespace    https://github.com/PheromoneItsMe/quick-web-translator
-// @version      1.1.0
-// @description  Instant and accurate English-to-Russian translation of selected text in a draggable and resizable popup for Brave and Chromium browsers.
-// @author       Pheromone
-// @match        *://*/*
-// @match        file:///*
-// @include      *
-// @grant        GM_xmlhttpRequest
-// @grant        GM_setValue
-// @grant        GM_getValue
-// @connect      translate.googleapis.com
-// @run-at       document-end
-// ==/UserScript==
+// Quick Web Translator - Content Script
+// Author: Pheromone
 
 (function () {
     'use strict';
 
-    // Configuration
+    // Default configuration
     const CONFIG = {
         targetLang: 'ru',
         sourceLang: 'auto',
-        showTriggerButton: false, // true = show trigger button icon, false = instant auto-translate
-        apiUrl: 'https://translate.googleapis.com/translate_a/single'
+        showTriggerButton: false // false = instant auto-translate, true = floating trigger icon
     };
 
-    // Load persisted settings
-    try {
-        if (typeof GM_getValue === 'function') {
-            CONFIG.showTriggerButton = GM_getValue('showTriggerButton', false);
-        }
-    } catch (e) {
-        console.warn('GM_getValue not available, using default config');
+    // Load persisted settings from chrome.storage
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+        chrome.storage.sync.get(['showTriggerButton', 'targetLang', 'sourceLang'], (res) => {
+            if (res) {
+                if (typeof res.showTriggerButton === 'boolean') CONFIG.showTriggerButton = res.showTriggerButton;
+                if (res.targetLang) CONFIG.targetLang = res.targetLang;
+                if (res.sourceLang) CONFIG.sourceLang = res.sourceLang;
+            }
+        });
     }
 
+    let hostElement = null;
+    let shadowRoot = null;
     let popupElement = null;
     let triggerBtnElement = null;
-    let shadowRoot = null;
 
-    // Audio playback state
+    let lastPointerPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     let isAudioPlaying = false;
-    let currentUtterance = null;
-    let currentAudioObj = null;
+    let activeUtterance = null;
+    let activeAudioObj = null;
 
-    // Initialize isolated Shadow DOM host container
-    function initShadowHost() {
-        if (shadowRoot) return;
+    let lastHandledText = '';
+    let selectionTimeout = null;
+    let popupOpenedTimestamp = 0;
 
-        const host = document.createElement('div');
-        host.id = 'qwt-translator-host';
-        host.style.cssText = 'all: initial; position: absolute; top: 0; left: 0; z-index: 2147483647; pointer-events: none;';
-        document.documentElement.appendChild(host);
+    // Ensure isolated Shadow DOM host container is mounted directly in document.body
+    function ensureShadowHost() {
+        if (!hostElement || !hostElement.isConnected || !document.contains(hostElement)) {
+            if (hostElement) {
+                try { hostElement.remove(); } catch (e) {}
+            }
 
-        shadowRoot = host.attachShadow({ mode: 'open' });
+            hostElement = document.createElement('div');
+            hostElement.id = 'qwt-translator-host';
+            hostElement.style.cssText = 'all: initial !important; display: block !important; position: static !important; width: 0 !important; height: 0 !important; margin: 0 !important; padding: 0 !important; border: none !important; z-index: 2147483647 !important; pointer-events: none !important;';
 
+            const root = document.body || document.documentElement;
+            if (root) {
+                root.appendChild(hostElement);
+            }
+
+            try {
+                shadowRoot = hostElement.attachShadow({ mode: 'open' });
+            } catch (e) {
+                shadowRoot = hostElement.shadowRoot;
+            }
+
+            injectStyles(shadowRoot);
+        }
+        return shadowRoot;
+    }
+
+    // Inject isolated CSS styles into Shadow DOM
+    function injectStyles(root) {
+        if (!root) return;
         const style = document.createElement('style');
         style.textContent = `
             :host {
@@ -71,8 +83,8 @@
             }
 
             .qwt-popup {
-                position: fixed;
-                pointer-events: auto;
+                position: fixed !important;
+                pointer-events: auto !important;
                 background: rgba(24, 28, 38, 0.96);
                 backdrop-filter: blur(16px);
                 -webkit-backdrop-filter: blur(16px);
@@ -86,7 +98,7 @@
                 max-height: 85vh;
                 width: 320px;
                 height: auto;
-                z-index: 2147483647;
+                z-index: 2147483647 !important;
                 display: flex;
                 flex-direction: column;
                 gap: 7px;
@@ -236,10 +248,9 @@
                 line-height: 1.4;
             }
 
-            /* Floating trigger button near selection */
             .qwt-trigger-btn {
-                position: fixed;
-                pointer-events: auto;
+                position: fixed !important;
+                pointer-events: auto !important;
                 width: 26px;
                 height: 26px;
                 background: #4f46e5;
@@ -251,7 +262,7 @@
                 cursor: pointer;
                 box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
                 border: 1px solid rgba(255, 255, 255, 0.15);
-                z-index: 2147483647;
+                z-index: 2147483647 !important;
                 transition: transform 0.15s ease, background 0.15s ease;
                 animation: qwtPop 0.15s ease;
             }
@@ -288,7 +299,6 @@
                 pointer-events: none;
             }
 
-            /* Custom scrollbar */
             .qwt-popup *::-webkit-scrollbar {
                 width: 4px;
             }
@@ -300,11 +310,9 @@
                 border-radius: 4px;
             }
         `;
-
-        shadowRoot.appendChild(style);
+        root.appendChild(style);
     }
 
-    // SVG Icons
     const ICONS = {
         translate: `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>`,
         speaker: `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`,
@@ -314,7 +322,6 @@
         settings: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`
     };
 
-    // Update speech button icon and state
     function updateSpeakButtonUI(playing) {
         if (!popupElement) return;
         const btn = popupElement.querySelector('.qwt-speak-btn');
@@ -331,145 +338,182 @@
         }
     }
 
-    // Stop all active audio playback
     function stopAudio() {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-        }
-        if (currentAudioObj) {
-            currentAudioObj.pause();
-            currentAudioObj.currentTime = 0;
-            currentAudioObj = null;
-        }
         isAudioPlaying = false;
         updateSpeakButtonUI(false);
-    }
 
-    // Play / Stop speech synthesis
-    function toggleSpeech(text, lang = 'en-US') {
-        if (isAudioPlaying) {
-            stopAudio();
-            return;
+        if (activeAudioObj) {
+            try {
+                activeAudioObj.pause();
+                activeAudioObj.currentTime = 0;
+            } catch (e) {}
+            activeAudioObj = null;
         }
 
-        stopAudio();
-        isAudioPlaying = true;
-        updateSpeakButtonUI(true);
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            try {
+                if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                    window.speechSynthesis.cancel();
+                }
+            } catch (e) {}
+        }
+        activeUtterance = null;
+    }
 
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = lang;
-            utterance.rate = 0.95;
-
-            utterance.onend = () => {
-                isAudioPlaying = false;
-                updateSpeakButtonUI(false);
-            };
-
-            utterance.onerror = () => {
-                isAudioPlaying = false;
-                updateSpeakButtonUI(false);
-            };
-
-            currentUtterance = utterance;
-            window.speechSynthesis.speak(utterance);
-        } else {
-            const audio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang.split('-')[0]}&client=tw-ob&q=${encodeURIComponent(text)}`);
-            currentAudioObj = audio;
+    function playGoogleTTS(text, lang = 'en') {
+        try {
+            const shortLang = lang.split('-')[0] || 'en';
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${encodeURIComponent(shortLang)}&client=tw-ob&q=${encodeURIComponent(text.substring(0, 200))}`;
+            const audio = new Audio(url);
+            activeAudioObj = audio;
 
             audio.onended = () => {
                 isAudioPlaying = false;
                 updateSpeakButtonUI(false);
+                activeAudioObj = null;
             };
 
             audio.onerror = () => {
                 isAudioPlaying = false;
                 updateSpeakButtonUI(false);
+                activeAudioObj = null;
             };
 
-            audio.play().catch(e => {
-                console.error('Audio playback error:', e);
+            audio.play().catch((err) => {
+                console.warn('Google TTS audio playback failed:', err);
                 isAudioPlaying = false;
                 updateSpeakButtonUI(false);
+                activeAudioObj = null;
             });
+        } catch (e) {
+            isAudioPlaying = false;
+            updateSpeakButtonUI(false);
         }
     }
 
-    // Query translation from Google Translate API
-    function requestTranslation(text) {
-        return new Promise((resolve, reject) => {
-            const url = `${CONFIG.apiUrl}?client=gtx&sl=${CONFIG.sourceLang}&tl=${CONFIG.targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+    function playSpeech(text, lang = 'en-US') {
+        if (!text || typeof text !== 'string') return;
+        const cleanText = text.trim();
+        if (!cleanText) return;
 
-            const handleSuccess = (responseText) => {
+        stopAudio();
+
+        // 40ms delay allows Chromium's audio thread to clear previous cancel() state
+        setTimeout(() => {
+            isAudioPlaying = true;
+            updateSpeakButtonUI(true);
+
+            if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
                 try {
-                    const data = JSON.parse(responseText);
-                    let translation = '';
-
-                    if (data[0] && Array.isArray(data[0])) {
-                        data[0].forEach(item => {
-                            if (item && item[0]) translation += item[0];
-                        });
+                    if (window.speechSynthesis.paused) {
+                        window.speechSynthesis.resume();
                     }
 
-                    resolve({
-                        original: text,
-                        translation: translation.trim(),
-                        srcLang: data[2] || 'en'
-                    });
-                } catch (err) {
-                    reject(new Error('Failed to parse translation response'));
-                }
-            };
+                    const utterance = new SpeechSynthesisUtterance(cleanText);
+                    utterance.lang = lang;
+                    utterance.rate = 0.95;
 
-            if (typeof GM_xmlhttpRequest === 'function') {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: url,
-                    timeout: 8000,
-                    onload: (res) => {
-                        if (res.status >= 200 && res.status < 300) {
-                            handleSuccess(res.responseText);
-                        } else {
-                            reject(new Error(`HTTP ${res.status}`));
+                    const shortLang = lang.split('-')[0] || 'en';
+                    const voices = window.speechSynthesis.getVoices();
+                    if (voices && voices.length > 0) {
+                        const voice = voices.find(v => v.lang.startsWith(shortLang) || v.lang.includes('en'));
+                        if (voice) utterance.voice = voice;
+                    }
+
+                    utterance.onend = () => {
+                        isAudioPlaying = false;
+                        updateSpeakButtonUI(false);
+                        activeUtterance = null;
+                    };
+
+                    utterance.onerror = (e) => {
+                        if (e.error === 'canceled' || e.error === 'interrupted') {
+                            return;
                         }
-                    },
-                    ontimeout: () => reject(new Error('Request timed out')),
-                    onerror: () => reject(new Error('Network error'))
+                        console.warn('SpeechSynthesis error, falling back to Google TTS:', e.error);
+                        playGoogleTTS(cleanText, shortLang);
+                    };
+
+                    activeUtterance = utterance; // Prevent garbage collection in Chromium
+                    window.speechSynthesis.speak(utterance);
+                    return;
+                } catch (err) {
+                    console.warn('SpeechSynthesis failed, using Google TTS fallback', err);
+                }
+            }
+
+            playGoogleTTS(cleanText, lang);
+        }, 45);
+    }
+
+    function toggleSpeech(text, lang = 'en-US') {
+        if (isAudioPlaying) {
+            stopAudio();
+        } else {
+            playSpeech(text, lang);
+        }
+    }
+
+    // Request translation via background service worker (100% bypasses CORS & CSP)
+    function requestTranslation(text) {
+        return new Promise((resolve, reject) => {
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                chrome.runtime.sendMessage({
+                    action: 'translate',
+                    text: text,
+                    sl: CONFIG.sourceLang,
+                    tl: CONFIG.targetLang
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message || 'Extension runtime error'));
+                        return;
+                    }
+
+                    if (response && response.success) {
+                        resolve(response);
+                    } else {
+                        reject(new Error(response ? response.error : 'Translation failed'));
+                    }
                 });
             } else {
-                fetch(url)
-                    .then(res => {
-                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                        return res.text();
-                    })
-                    .then(handleSuccess)
-                    .catch(reject);
+                reject(new Error('Extension runtime not available'));
             }
         });
     }
 
-    // Calculate optimal popup position relative to text selection
     function calculatePopupPosition(rect) {
-        const padding = 12;
+        const padding = 14;
         const estimatedWidth = 320;
-        const estimatedHeight = 95;
+        const estimatedHeight = 105;
 
-        let left = rect.left;
-        let top = rect.bottom + 8;
+        let left = lastPointerPos.x;
+        let top = lastPointerPos.y + 14;
+
+        if (rect && typeof rect.left === 'number' && (rect.width > 0 || rect.height > 0)) {
+            left = rect.left;
+            top = rect.bottom + 8;
+
+            if (top + estimatedHeight > window.innerHeight - padding) {
+                if (rect.top - estimatedHeight - 8 > padding) {
+                    top = rect.top - estimatedHeight - 8;
+                } else {
+                    top = Math.max(padding, window.innerHeight - estimatedHeight - padding);
+                }
+            }
+        } else {
+            if (top + estimatedHeight > window.innerHeight - padding) {
+                top = Math.max(padding, lastPointerPos.y - estimatedHeight - 14);
+            }
+        }
 
         if (left + estimatedWidth > window.innerWidth - padding) {
             left = window.innerWidth - estimatedWidth - padding;
         }
         if (left < padding) left = padding;
 
-        if (top + estimatedHeight > window.innerHeight - padding) {
-            top = Math.max(padding, rect.top - estimatedHeight - 8);
-        }
-
-        return { left, top };
+        return { left: Math.round(left), top: Math.round(top) };
     }
 
-    // Initialize dragging logic for popup window
     function setupDraggable(popupEl, headerEl) {
         let isDragging = false;
         let startX = 0, startY = 0;
@@ -505,18 +549,17 @@
 
             const onMouseUp = () => {
                 isDragging = false;
-                window.removeEventListener('mousemove', onMouseMove);
-                window.removeEventListener('mouseup', onMouseUp);
+                window.removeEventListener('mousemove', onMouseMove, { capture: true });
+                window.removeEventListener('mouseup', onMouseUp, { capture: true });
             };
 
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', onMouseUp);
-        });
+            window.addEventListener('mousemove', onMouseMove, { capture: true });
+            window.addEventListener('mouseup', onMouseUp, { capture: true });
+        }, { capture: true });
     }
 
-    // Create and display translation popup
     function showPopup(rect, text) {
-        initShadowHost();
+        const root = ensureShadowHost();
         hideTriggerButton();
         stopAudio();
 
@@ -524,6 +567,7 @@
 
         popupElement = document.createElement('div');
         popupElement.className = 'qwt-popup';
+        popupOpenedTimestamp = Date.now();
 
         const coords = calculatePopupPosition(rect);
         popupElement.style.left = `${coords.left}px`;
@@ -550,12 +594,11 @@
             </div>
         `;
 
-        shadowRoot.appendChild(popupElement);
+        root.appendChild(popupElement);
 
         const headerEl = popupElement.querySelector('.qwt-header');
         setupDraggable(popupElement, headerEl);
 
-        // Button event listeners
         const speakBtn = popupElement.querySelector('.qwt-speak-btn');
         const copyBtn = popupElement.querySelector('.qwt-copy-btn');
         const closeBtn = popupElement.querySelector('.qwt-close-btn');
@@ -574,15 +617,14 @@
         modeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             CONFIG.showTriggerButton = !CONFIG.showTriggerButton;
-            if (typeof GM_setValue === 'function') {
-                GM_setValue('showTriggerButton', CONFIG.showTriggerButton);
+            if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+                chrome.storage.sync.set({ showTriggerButton: CONFIG.showTriggerButton });
             }
             modeBtn.classList.toggle('active', CONFIG.showTriggerButton);
             modeBtn.title = CONFIG.showTriggerButton ? 'Mode: Trigger button' : 'Mode: Auto-translate';
             showToast(CONFIG.showTriggerButton ? 'Mode: Trigger button' : 'Mode: Auto-translate');
         });
 
-        // Execute translation request
         requestTranslation(text)
             .then(result => {
                 if (!popupElement) return;
@@ -592,12 +634,11 @@
                 if (!popupElement) return;
                 const body = popupElement.querySelector('.qwt-body');
                 if (body) {
-                    body.innerHTML = `<div class="qwt-error">Translation failed: ${escapeHtml(err.message)}</div>`;
+                    body.innerHTML = `<div class="qwt-error">Translation error: ${escapeHtml(err.message)}</div>`;
                 }
             });
     }
 
-    // Render received translation in popup body
     function renderTranslationResult(result) {
         if (!popupElement) return;
         const body = popupElement.querySelector('.qwt-body');
@@ -620,7 +661,6 @@
         }
     }
 
-    // Display temporary toast message
     function showToast(msg) {
         if (!popupElement) return;
         const oldToast = popupElement.querySelector('.qwt-toast');
@@ -634,9 +674,8 @@
         setTimeout(() => toast.remove(), 1600);
     }
 
-    // Display floating trigger button near selected text
     function showTriggerButton(rect, text) {
-        initShadowHost();
+        const root = ensureShadowHost();
         hidePopup();
         if (triggerBtnElement) triggerBtnElement.remove();
 
@@ -645,10 +684,10 @@
         triggerBtnElement.title = 'Translate selected text';
         triggerBtnElement.innerHTML = ICONS.translate;
 
-        let left = rect.right + 4;
-        let top = rect.top - 28;
+        let left = (rect && typeof rect.right === 'number') ? rect.right + 4 : lastPointerPos.x + 8;
+        let top = (rect && typeof rect.top === 'number') ? rect.top - 28 : lastPointerPos.y - 28;
 
-        if (top < 10) top = rect.bottom + 6;
+        if (top < 10) top = (rect && typeof rect.bottom === 'number') ? rect.bottom + 6 : lastPointerPos.y + 12;
         if (left + 30 > window.innerWidth) left = window.innerWidth - 34;
 
         triggerBtnElement.style.left = `${left}px`;
@@ -659,7 +698,7 @@
             showPopup(rect, text);
         });
 
-        shadowRoot.appendChild(triggerBtnElement);
+        root.appendChild(triggerBtnElement);
     }
 
     function hidePopup() {
@@ -687,66 +726,134 @@
             .replace(/'/g, '&#039;');
     }
 
-    // Validate if text is suitable for translation
     function isValidTranslatableText(text) {
         if (!text || typeof text !== 'string') return false;
-        const trimmed = text.trim();
-        if (trimmed.length === 0 || trimmed.length > 4000) return false;
-        return /[a-zA-Z\u00C0-\u024F]/.test(trimmed);
+        const cleaned = text.replace(/[\u200B-\u200D\uFEFF\s]/g, '');
+        if (cleaned.length === 0 || cleaned.length > 5000) return false;
+        return /[a-zA-Z\u00C0-\u024F\u0400-\u04FF]/.test(cleaned);
     }
 
-    // Handle user text selection
-    function handleSelection() {
-        const selection = window.getSelection();
-        if (!selection || selection.isCollapsed) return;
+    function extractSelectionData() {
+        let text = '';
+        let rect = null;
 
-        const text = selection.toString().trim();
-        if (!isValidTranslatableText(text)) return;
-
-        try {
-            const range = selection.getRangeAt(0);
-            const rect = range.getBoundingClientRect();
-            if (rect.width === 0 && rect.height === 0) return;
-
-            if (CONFIG.showTriggerButton) {
-                showTriggerButton(rect, text);
-            } else {
-                showPopup(rect, text);
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed) {
+            text = sel.toString().trim();
+            if (text && sel.rangeCount > 0) {
+                try {
+                    const range = sel.getRangeAt(0);
+                    rect = range.getBoundingClientRect();
+                    if (rect.width === 0 && rect.height === 0) {
+                        const rects = range.getClientRects();
+                        if (rects.length > 0) rect = rects[0];
+                    }
+                } catch (e) {}
             }
-        } catch (e) {
-            console.error('Error handling selection:', e);
+        }
+
+        if (!text || !isValidTranslatableText(text)) {
+            return null;
+        }
+
+        if (!rect || (rect.width === 0 && rect.height === 0)) {
+            rect = {
+                left: lastPointerPos.x,
+                right: lastPointerPos.x,
+                top: lastPointerPos.y,
+                bottom: lastPointerPos.y,
+                width: 1,
+                height: 1
+            };
+        }
+
+        return { text, rect };
+    }
+
+    function handleSelection() {
+        const data = extractSelectionData();
+        if (!data || !data.text) return;
+
+        if (data.text === lastHandledText && popupElement) return;
+        lastHandledText = data.text;
+
+        if (CONFIG.showTriggerButton) {
+            showTriggerButton(data.rect, data.text);
+        } else {
+            showPopup(data.rect, data.text);
         }
     }
 
-    // Global event listeners
+    function queueSelectionCheck(delay = 40) {
+        if (selectionTimeout) clearTimeout(selectionTimeout);
+        selectionTimeout = setTimeout(() => {
+            handleSelection();
+        }, delay);
+    }
+
+    const updatePointerPos = (e) => {
+        if (e && typeof e.clientX === 'number') {
+            lastPointerPos.x = e.clientX;
+            lastPointerPos.y = e.clientY;
+        }
+    };
+
+    document.addEventListener('pointermove', updatePointerPos, { capture: true, passive: true });
+    document.addEventListener('mousemove', updatePointerPos, { capture: true, passive: true });
+    document.addEventListener('pointerdown', updatePointerPos, { capture: true, passive: true });
+    document.addEventListener('mousedown', updatePointerPos, { capture: true, passive: true });
+
     document.addEventListener('mouseup', (e) => {
-        if (e.composedPath && shadowRoot && e.composedPath().some(el => el === shadowRoot || (el.shadowRoot && el.shadowRoot === shadowRoot))) {
+        updatePointerPos(e);
+        if (shadowRoot && e.composedPath && e.composedPath().some(el => el === shadowRoot || el === hostElement)) {
             return;
         }
+        queueSelectionCheck(30);
+    }, { capture: true, passive: true });
 
-        setTimeout(() => {
-            handleSelection();
-        }, 30);
-    });
+    document.addEventListener('pointerup', (e) => {
+        updatePointerPos(e);
+        if (shadowRoot && e.composedPath && e.composedPath().some(el => el === shadowRoot || el === hostElement)) {
+            return;
+        }
+        queueSelectionCheck(30);
+    }, { capture: true, passive: true });
+
+    document.addEventListener('keyup', (e) => {
+        if (e.key === 'Shift' || e.key.startsWith('Arrow') || (e.ctrlKey && e.key.toLowerCase() === 'a')) {
+            queueSelectionCheck(50);
+        }
+    }, { capture: true, passive: true });
+
+    document.addEventListener('selectionchange', () => {
+        queueSelectionCheck(80);
+    }, { capture: true, passive: true });
 
     // Dismiss popup on outside click
     document.addEventListener('mousedown', (e) => {
-        if (shadowRoot) {
+        updatePointerPos(e);
+        if (shadowRoot && popupElement) {
+            if (Date.now() - popupOpenedTimestamp < 250) {
+                return;
+            }
+
             const path = e.composedPath ? e.composedPath() : [];
-            const isInsideOurUi = path.some(el => el === popupElement || el === triggerBtnElement || el === shadowRoot);
+            const isInsideOurUi = path.some(el => el === popupElement || el === triggerBtnElement || el === shadowRoot || el === hostElement);
             if (!isInsideOurUi) {
                 hidePopup();
                 hideTriggerButton();
+                lastHandledText = '';
             }
         }
-    });
+    }, { capture: true, passive: true });
 
-    // Dismiss popup on Escape key
+    // Dismiss popup on Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             hidePopup();
             hideTriggerButton();
+            lastHandledText = '';
         }
-    });
+    }, { capture: true, passive: true });
 
 })();
