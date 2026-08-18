@@ -27,6 +27,10 @@
     let popupElement = null;
     let triggerBtnElement = null;
 
+    let isPinned = false;
+    let activeSelectionText = '';
+    let latestTranslationText = '';
+
     let lastPointerPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     let isAudioPlaying = false;
     let activeUtterance = null;
@@ -92,8 +96,8 @@
                 border-radius: 12px;
                 box-shadow: 0 14px 34px rgba(0, 0, 0, 0.48), 0 2px 6px rgba(0, 0, 0, 0.2);
                 padding: 10px 14px 12px;
-                min-width: 210px;
-                min-height: 78px;
+                min-width: 260px;
+                min-height: 80px;
                 max-width: 90vw;
                 max-height: 85vh;
                 width: 320px;
@@ -102,11 +106,79 @@
                 display: flex;
                 flex-direction: column;
                 gap: 7px;
-                resize: both;
                 overflow: hidden;
                 animation: qwtFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
                 transition: opacity 0.15s ease;
                 user-select: text;
+                box-sizing: border-box;
+            }
+
+            /* Resizer handles for 8-direction Windows-like resizing */
+            .qwt-resizer {
+                position: absolute;
+                z-index: 50;
+                user-select: none;
+                touch-action: none;
+            }
+
+            /* Edges */
+            .qwt-resizer-t {
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 6px;
+                cursor: ns-resize;
+            }
+            .qwt-resizer-b {
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 6px;
+                cursor: ns-resize;
+            }
+            .qwt-resizer-l {
+                top: 0;
+                bottom: 0;
+                left: 0;
+                width: 6px;
+                cursor: ew-resize;
+            }
+            .qwt-resizer-r {
+                top: 0;
+                bottom: 0;
+                right: 0;
+                width: 6px;
+                cursor: ew-resize;
+            }
+
+            /* Corners */
+            .qwt-resizer-tl {
+                top: 0;
+                left: 0;
+                width: 12px;
+                height: 12px;
+                cursor: nwse-resize;
+            }
+            .qwt-resizer-tr {
+                top: 0;
+                right: 0;
+                width: 12px;
+                height: 12px;
+                cursor: nesw-resize;
+            }
+            .qwt-resizer-bl {
+                bottom: 0;
+                left: 0;
+                width: 12px;
+                height: 12px;
+                cursor: nesw-resize;
+            }
+            .qwt-resizer-br {
+                bottom: 0;
+                right: 0;
+                width: 12px;
+                height: 12px;
+                cursor: nwse-resize;
             }
 
             @keyframes qwtFadeIn {
@@ -130,6 +202,9 @@
                 user-select: none;
                 cursor: grab;
                 flex-shrink: 0;
+                position: relative;
+                z-index: 60;
+                min-width: 0;
             }
 
             .qwt-header:active {
@@ -145,6 +220,9 @@
                 color: #94a3b8;
                 letter-spacing: 0.3px;
                 pointer-events: none;
+                position: relative;
+                z-index: 60;
+                flex-shrink: 0;
             }
 
             .qwt-badge svg {
@@ -158,6 +236,9 @@
                 align-items: center;
                 gap: 3px;
                 cursor: default;
+                position: relative;
+                z-index: 70;
+                flex-shrink: 0;
             }
 
             .qwt-btn-wrap {
@@ -195,6 +276,25 @@
                 stroke: currentColor;
                 stroke-width: 2;
                 fill: none;
+            }
+
+            /* Pin Button Styles & State */
+            .qwt-pin-btn {
+                transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+            }
+
+            .qwt-pin-btn svg {
+                transform: rotate(45deg);
+                transform-origin: center center;
+            }
+
+            .qwt-pin-btn.pinned {
+                color: #818cf8 !important;
+                background: rgba(129, 140, 248, 0.14) !important;
+            }
+
+            .qwt-pin-btn.pinned svg path {
+                fill: currentColor;
             }
 
             /* Speaker / Playback states */
@@ -324,7 +424,7 @@
                 display: flex;
                 flex-direction: column;
                 overflow: hidden;
-                min-height: 28px;
+                min-height: 0;
             }
 
             .qwt-translation {
@@ -336,6 +436,7 @@
                 word-break: break-word;
                 overflow-y: auto;
                 flex: 1;
+                min-height: 0;
                 padding-right: 2px;
             }
 
@@ -417,6 +518,7 @@
     }
 
     const ICONS = {
+        pin: `<svg viewBox="0 0 24 24"><path d="M16 3l1 6 2 2v1H5v-1l2-2 1-6h8z"></path><line x1="12" y1="12" x2="12" y2="21"></line><line x1="8" y1="3" x2="16" y2="3"></line></svg>`,
         translate: `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>`,
         speaker: `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`,
         stop: `<svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" stroke="none"></rect></svg>`,
@@ -618,19 +720,100 @@
         return { left: Math.round(left), top: Math.round(top) };
     }
 
+    function setupResizable(popupEl) {
+        const resizers = popupEl.querySelectorAll('.qwt-resizer');
+        const minWidth = 260;
+        const minHeight = 80;
+
+        resizers.forEach(resizer => {
+            resizer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const dir = resizer.getAttribute('data-dir');
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const startRect = popupEl.getBoundingClientRect();
+                const startLeft = startRect.left;
+                const startTop = startRect.top;
+                const startWidth = startRect.width;
+                const startHeight = startRect.height;
+
+                popupEl.style.width = `${startWidth}px`;
+                popupEl.style.height = `${startHeight}px`;
+                popupEl.style.left = `${startLeft}px`;
+                popupEl.style.top = `${startTop}px`;
+                popupEl.style.right = 'auto';
+                popupEl.style.bottom = 'auto';
+
+                const originalUserSelect = document.body.style.userSelect;
+                document.body.style.userSelect = 'none';
+
+                const onMouseMove = (moveEvent) => {
+                    const dx = moveEvent.clientX - startX;
+                    const dy = moveEvent.clientY - startY;
+
+                    let newWidth = startWidth;
+                    let newHeight = startHeight;
+                    let newLeft = startLeft;
+                    let newTop = startTop;
+
+                    // Horizontal resizing
+                    if (dir.includes('r')) {
+                        const maxWidth = window.innerWidth - startLeft - 4;
+                        newWidth = Math.max(minWidth, Math.min(maxWidth, startWidth + dx));
+                    } else if (dir.includes('l')) {
+                        const rightEdge = startLeft + startWidth;
+                        const maxPossibleWidth = rightEdge - 4;
+                        const rawWidth = startWidth - dx;
+                        newWidth = Math.max(minWidth, Math.min(maxPossibleWidth, rawWidth));
+                        newLeft = rightEdge - newWidth;
+                    }
+
+                    // Vertical resizing
+                    if (dir.includes('b')) {
+                        const maxHeight = window.innerHeight - startTop - 4;
+                        newHeight = Math.max(minHeight, Math.min(maxHeight, startHeight + dy));
+                    } else if (dir.includes('t')) {
+                        const bottomEdge = startTop + startHeight;
+                        const maxPossibleHeight = bottomEdge - 4;
+                        const rawHeight = startHeight - dy;
+                        newHeight = Math.max(minHeight, Math.min(maxPossibleHeight, rawHeight));
+                        newTop = bottomEdge - newHeight;
+                    }
+
+                    popupEl.style.width = `${Math.round(newWidth)}px`;
+                    popupEl.style.height = `${Math.round(newHeight)}px`;
+                    popupEl.style.left = `${Math.round(newLeft)}px`;
+                    popupEl.style.top = `${Math.round(newTop)}px`;
+                };
+
+                const onMouseUp = () => {
+                    document.body.style.userSelect = originalUserSelect;
+                    window.removeEventListener('mousemove', onMouseMove, { capture: true });
+                    window.removeEventListener('mouseup', onMouseUp, { capture: true });
+                };
+
+                window.addEventListener('mousemove', onMouseMove, { capture: true });
+                window.addEventListener('mouseup', onMouseUp, { capture: true });
+            });
+        });
+    }
+
     function setupDraggable(popupEl, headerEl) {
         let isDragging = false;
         let startX = 0, startY = 0;
         let initialLeft = 0, initialTop = 0;
 
         headerEl.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.qwt-actions') || e.target.closest('.qwt-btn') || e.target.closest('.qwt-btn-wrap')) return;
+            if (e.target.closest('.qwt-actions') || e.target.closest('.qwt-btn') || e.target.closest('.qwt-btn-wrap') || e.target.closest('.qwt-resizer')) return;
 
             isDragging = true;
             startX = e.clientX;
             startY = e.clientY;
-            initialLeft = popupEl.offsetLeft;
-            initialTop = popupEl.offsetTop;
+            const rect = popupEl.getBoundingClientRect();
+            initialLeft = rect.left;
+            initialTop = rect.top;
 
             e.preventDefault();
 
@@ -645,8 +828,8 @@
                 const newLeft = Math.max(4, Math.min(maxLeft - 4, initialLeft + dx));
                 const newTop = Math.max(4, Math.min(maxTop - 4, initialTop + dy));
 
-                popupEl.style.left = `${newLeft}px`;
-                popupEl.style.top = `${newTop}px`;
+                popupEl.style.left = `${Math.round(newLeft)}px`;
+                popupEl.style.top = `${Math.round(newTop)}px`;
                 popupEl.style.right = 'auto';
                 popupEl.style.bottom = 'auto';
             };
@@ -662,6 +845,35 @@
         }, { capture: true });
     }
 
+    function updatePinnedPopupContent(text) {
+        if (!popupElement || !text) return;
+        activeSelectionText = text;
+        stopAudio();
+
+        const body = popupElement.querySelector('.qwt-body');
+        if (body) {
+            body.innerHTML = `
+                <div class="qwt-loading">
+                    <div class="qwt-spinner"></div>
+                    <span>Translating...</span>
+                </div>
+            `;
+        }
+
+        requestTranslation(text)
+            .then(result => {
+                if (!popupElement || activeSelectionText !== text) return;
+                latestTranslationText = (result && result.translation) ? result.translation : '';
+                renderTranslationResult(result);
+            })
+            .catch(err => {
+                if (!popupElement || activeSelectionText !== text) return;
+                if (body) {
+                    body.innerHTML = `<div class="qwt-error">Translation error: ${escapeHtml(err.message)}</div>`;
+                }
+            });
+    }
+
     function showPopup(rect, text) {
         const root = ensureShadowHost();
         hideTriggerButton();
@@ -673,9 +885,11 @@
         popupElement.className = 'qwt-popup';
         popupOpenedTimestamp = Date.now();
 
-        let latestTranslationText = '';
+        activeSelectionText = text;
+        latestTranslationText = '';
         let copyTimeout = null;
         let modeTimeout = null;
+        let pinTimeout = null;
 
         const liveData = extractSelectionData();
         const effectiveRect = (liveData && liveData.rect) ? liveData.rect : (triggerBtnElement ? triggerBtnElement.getBoundingClientRect() : rect);
@@ -684,12 +898,24 @@
         popupElement.style.top = `${coords.top}px`;
 
         popupElement.innerHTML = `
+            <div class="qwt-resizer qwt-resizer-t" data-dir="t"></div>
+            <div class="qwt-resizer qwt-resizer-r" data-dir="r"></div>
+            <div class="qwt-resizer qwt-resizer-b" data-dir="b"></div>
+            <div class="qwt-resizer qwt-resizer-l" data-dir="l"></div>
+            <div class="qwt-resizer qwt-resizer-tl" data-dir="tl"></div>
+            <div class="qwt-resizer qwt-resizer-tr" data-dir="tr"></div>
+            <div class="qwt-resizer qwt-resizer-bl" data-dir="bl"></div>
+            <div class="qwt-resizer qwt-resizer-br" data-dir="br"></div>
             <div class="qwt-header">
                 <div class="qwt-badge">
                     ${ICONS.translate}
                     <span>Translation</span>
                 </div>
                 <div class="qwt-actions">
+                    <div class="qwt-btn-wrap">
+                        <button class="qwt-btn qwt-pin-btn ${isPinned ? 'pinned' : ''}" title="${isPinned ? 'Unpin window' : 'Pin window'}">${ICONS.pin}</button>
+                        <span class="qwt-btn-tooltip qwt-pin-tooltip">${isPinned ? 'Pinned' : 'Pin window'}</span>
+                    </div>
                     <div class="qwt-btn-wrap">
                         <button class="qwt-btn qwt-speak-btn" title="Listen to pronunciation">${ICONS.speaker}</button>
                     </div>
@@ -717,8 +943,11 @@
         root.appendChild(popupElement);
 
         const headerEl = popupElement.querySelector('.qwt-header');
+        setupResizable(popupElement);
         setupDraggable(popupElement, headerEl);
 
+        const pinBtn = popupElement.querySelector('.qwt-pin-btn');
+        const pinTooltip = popupElement.querySelector('.qwt-pin-tooltip');
         const speakBtn = popupElement.querySelector('.qwt-speak-btn');
         const copyBtn = popupElement.querySelector('.qwt-copy-btn');
         const copyTooltip = popupElement.querySelector('.qwt-copy-tooltip');
@@ -726,20 +955,37 @@
         const modeBtn = popupElement.querySelector('.qwt-mode-btn');
         const modeTooltip = popupElement.querySelector('.qwt-mode-tooltip');
 
+        pinBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isPinned = !isPinned;
+            pinBtn.classList.toggle('pinned', isPinned);
+            pinBtn.title = isPinned ? 'Unpin window' : 'Pin window';
+
+            if (pinTooltip) {
+                pinTooltip.textContent = isPinned ? 'Pinned' : 'Unpinned';
+                if (pinTimeout) clearTimeout(pinTimeout);
+                pinTooltip.classList.add('visible');
+                pinTimeout = setTimeout(() => {
+                    pinTooltip.classList.remove('visible');
+                }, 1200);
+            }
+        });
+
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            isPinned = false;
             hidePopup();
         });
 
         speakBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            toggleSpeech(text);
+            toggleSpeech(activeSelectionText || text);
         });
 
         // Copy button with interactive swap animation and "Copied!" tooltip
         copyBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const textToCopy = latestTranslationText || text;
+            const textToCopy = latestTranslationText || activeSelectionText || text;
             if (!textToCopy) return;
 
             navigator.clipboard.writeText(textToCopy).then(() => {
@@ -792,12 +1038,12 @@
 
         requestTranslation(text)
             .then(result => {
-                if (!popupElement) return;
+                if (!popupElement || activeSelectionText !== text) return;
                 latestTranslationText = (result && result.translation) ? result.translation : '';
                 renderTranslationResult(result);
             })
             .catch(err => {
-                if (!popupElement) return;
+                if (!popupElement || activeSelectionText !== text) return;
                 const body = popupElement.querySelector('.qwt-body');
                 if (body) {
                     body.innerHTML = `<div class="qwt-error">Translation error: ${escapeHtml(err.message)}</div>`;
@@ -1011,6 +1257,7 @@
 
     function hidePopup() {
         stopAudio();
+        isPinned = false;
         if (popupElement) {
             popupElement.remove();
             popupElement = null;
@@ -1099,6 +1346,13 @@
         if (data.text === lastHandledText && (popupElement || triggerBtnElement)) return;
         lastHandledText = data.text;
 
+        // If the popup is pinned, update its translation in-place without moving its viewport position
+        if (isPinned && popupElement) {
+            hideTriggerButton();
+            updatePinnedPopupContent(data.text);
+            return;
+        }
+
         if (CONFIG.showTriggerButton) {
             showTriggerButton(data.rect, data.text);
         } else {
@@ -1165,8 +1419,11 @@
             lastHandledText = '';
         }
 
-        // Dismiss popup when clicking outside (with debounce guard for newly opened popups)
+        // Dismiss popup when clicking outside (unless pinned)
         if (popupElement) {
+            if (isPinned) {
+                return;
+            }
             if (Date.now() - popupOpenedTimestamp < 250) {
                 return;
             }
@@ -1178,6 +1435,7 @@
     // Dismiss popup on Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+            isPinned = false;
             hidePopup();
             hideTriggerButton();
             lastHandledText = '';

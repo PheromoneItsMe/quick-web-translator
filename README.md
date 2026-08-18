@@ -4,7 +4,7 @@
 
 **A fast, elegant, and distraction-free standalone browser extension (Manifest V3) for instant English-to-Russian translation on any webpage.**
 
-[![Version](https://img.shields.io/badge/Version-1.3.0-blueviolet.svg?style=flat-square)](manifest.json)
+[![Version](https://img.shields.io/badge/Version-1.4.0-blueviolet.svg?style=flat-square)](manifest.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Manifest V3](https://img.shields.io/badge/Extension-Manifest%20V3-indigo.svg?style=flat-square)](manifest.json)
 [![Supported Browsers](https://img.shields.io/badge/Browser-Brave%20%7C%20Chrome%20%7C%20Edge%20%7C%20Firefox-purple.svg?style=flat-square)]()
@@ -21,21 +21,21 @@
 # English Version
 
 > [!NOTE]
-> **Standalone Extension (v1.3.0)**: Quick Web Translator is built as a native **Manifest V3 Browser Extension**. It runs directly in Brave, Chrome, Edge, and other Chromium-based browsers without requiring any userscript manager.
+> **Standalone Extension (v1.4.0)**: Quick Web Translator is built as a native **Manifest V3 Browser Extension**. It runs directly in Brave, Chrome, Edge, and other Chromium-based browsers without requiring any userscript manager.
 
 ## ✨ Features
 
 - ⚡ **Instant Translation**: Highlight or select any English word, phrase, or multi-line paragraph—clean Russian translation appears immediately.
-- 🌐 **Full Single Page Application (SPA) Support**: Works seamlessly on dynamic platforms including **YouTube** (video descriptions, live chat, comments), **Google Gemini**, **ChatGPT**, Reddit, dynamic wikis, and complex Web Components.
+- 🌐 **Full Single Page Application (SPA) Support**: Works seamlessly on dynamic platforms including **YouTube** (video descriptions, live chat, comments), **Google Gemini**, Reddit, dynamic wikis, and complex Web Components.
+- 📌 **Pin Window in Place**: Lock the translation window in a fixed position anywhere on screen. As you read and select new text, the window stays stationary while dynamically updating the translation in real time.
 - 🪟 **Draggable Floating Window**: Grab the header and reposition the translation popup anywhere across your screen without blocking text underneath.
-- 📐 **Resizable (Windows-style)**: Resize freely by dragging any edge or the bottom-right corner to view long paragraphs comfortably.
+- 📐 **8-Directional Window Resizing (Windows-style)**: Freely resize the window from all 8 directions—pull any of the 4 borders (top, bottom, left, right) or any of the 4 corners.
 - 🔊 **Audio Pronunciation with Play / Stop**:
   - Click 🔊 to listen to authentic English pronunciation.
   - The icon dynamically shifts to a stop button ⏹️ during playback.
   - Click ⏹️ anytime to halt playback instantly.
   - Click again to restart playback from the beginning.
 - 📋 **1-Click Copy**: Fast clipboard copy button with smooth toast notification feedback.
-- 🛡️ **Zero Style Leakage (Shadow DOM)**: All styling is completely encapsulated inside an open `ShadowRoot`. Website stylesheets cannot break the popup, and popup styles never pollute the webpage.
 - 👁️ **Eye-Friendly Dark Glassmorphic Design**: Modern dark theme with soft contrast typography (`#f1f5f9`), frosted glass blur (`backdrop-filter`), and smooth micro-animations.
 - 🖱️ **Effortless Dismissal**: Click anywhere outside the popup or tap <kbd>Escape</kbd> to dismiss.
 - ⚙️ **Popup Settings & Dual Modes**:
@@ -89,45 +89,40 @@ flowchart LR
 | Action | How to Trigger |
 | :--- | :--- |
 | **Translate text** | Highlight any English text on any webpage |
+| **Pin / Unpin window** | Click the pin icon 📌 in the header bar |
 | **Move popup** | Click and drag the popup header bar |
-| **Resize popup** | Drag the bottom-right corner or edges |
+| **Resize popup** | Drag any of the 4 borders or 4 corners (8 directions) |
 | **Listen / Stop Audio** | Click 🔊 to play, click ⏹️ to stop |
 | **Copy translation** | Click the copy icon 📋 in the header |
 | **Dismiss popup** | Click anywhere outside the popup or press <kbd>Esc</kbd> |
 
 ---
 
-## 🚀 What's New in v1.3.0
+## 🚀 What's New in v1.4.0
 
-- 🧠 **Smart Mixed-Language Translation Auto-Correction**: Fixed an issue where selecting mixed text (such as English headlines accompanied by non-English source citations or metadata) caused the translation engine's auto-detector to misclassify the text and return English words untranslated. The background service worker now automatically detects and re-translates the English content seamlessly.
-- 🎯 **Real-Time Scroll & Window Resize Anchoring**: The floating trigger button now dynamically tracks the exact on-screen position of selected text in real time across the page and scrollable containers (`window.scroll`, `overflow: auto/scroll` divs) using `requestAnimationFrame`.
-- 🛡️ **Universal Occlusion & Container Clipping Detection**:
-  - Automatically detects when selected text scrolls behind fixed/sticky navigation bars, toolbars, or headers (such as YouTube's search bar `#masthead` or Google Gemini's bottom `<input-container>` prompt area) using multi-point DOM hit-testing (`document.elementsFromPoint`).
-  - Gracefully hides the trigger button when occluded or clipped by parent container boundaries, preventing visual overlap with website controls.
-  - Automatically restores button visibility the instant text scrolls back into visible view.
-- 🔄 **Adaptive Trigger Button Placement**: Dynamically checks clearance and automatically flips the trigger button above or below the selection depending on available viewport space and nearby sticky headers.
-- ⚡ **Optimized Lifecycle & Selection Cleanup**: Immediate button dismissal upon clearing selections or clicking outside, preventing lingering UI artifacts.
+- 🪟 **Windows-Style 8-Directional Resizing**: The translation popup window can now be freely resized from all 4 borders (top, bottom, left, right) and all 4 corners (top-left, top-right, bottom-left, bottom-right), providing full desktop-like resizing flexibility.
+- 📌 **Pin Window ("Закрепить окно")**: Added a dedicated pin button in the header. When pinned, the window stays in place anywhere on your screen while dynamically updating the translation as you highlight new text, protected from accidental outside-click dismissal.
 
 ---
 
 # Russian Version / Русская версия
 
 > [!NOTE]
-> **Автономное расширение (v1.3.0)**: Quick Web Translator создан как нативное **браузерное расширение (Manifest V3)**. Оно работает напрямую в Brave, Chrome, Edge и других браузерах и **не требует** сторонних менеджеров скриптов (Tampermonkey).
+> **Автономное расширение (v1.4.0)**: Quick Web Translator создан как нативное **браузерное расширение (Manifest V3)**. Оно работает напрямую в Brave, Chrome, Edge и других браузерах и **не требует** сторонних менеджеров скриптов (Tampermonkey).
 
 ## ✨ Возможности
 
 - ⚡ **Мгновенный перевод**: Выделите любое английское слово, фразу или длинный абзац — перевод на русский появится мгновенно рядом с курсором.
-- 🌐 **Полная совместимость с SPA и нейросетями**: Безупречно работает на динамических сайтах, включая **YouTube** (комментарии, описания, чат), **Google Gemini**, **ChatGPT**, Reddit, вики и веб-компоненты.
+- 🌐 **Полная совместимость с SPA**: Безупречно работает на динамических сайтах, включая **YouTube** (комментарии, описания, чат), **Google Gemini**, Reddit, вики и веб-компоненты.
+- 📌 **Закрепление окна (Pin Window)**: Зафиксируйте окно переводчика в удобном месте экрана. При дальнейшем чтении и выделении любого текста окно остаётся неподвижным, а перевод динамически обновляется внутри него в реальном времени.
 - 🪟 **Перемещение окна (Drag & Drop)**: Зажмите заголовок окна и перемещайте его в любое удобное место экрана.
-- 📐 **Изменение размера (Resize как в Windows)**: Свободно меняйте ширину и высоту окна за границы или правый нижний угол.
+- 📐 **Изменение размера во всех 8 направлениях (как в Windows)**: Свободно меняйте ширину и высоту окна, потянув за любую из 4 границ (верх, низ, лево, право) или любой из 4 углов.
 - 🔊 **Озвучка с управлением Play / Stop**:
   - Нажмите 🔊 для прослушивания произношения оригинального текста.
   - Во время воспроизведения иконка динамически меняется на значок ⏹️ (**Стоп**).
   - Нажатие на ⏹️ немедленно останавливает звук.
   - Следующее нажатие запускает озвучку заново с начала.
 - 📋 **Копирование в 1 клик**: Удобная кнопка копирования перевода в буфер обмена с подтверждающим уведомлением.
-- 🛡️ **Полная изоляция стилей (Shadow DOM)**: Интерфейс изолирован внутри `ShadowRoot`. Стили сайтов не могут сломать внешний вид переводчика, а стили переводчика не влияют на страницу.
 - 👁️ **Комфортная тёмная тема**: Эффект матового стекла (`backdrop-filter`), мягкая контрастная типографика и субпиксельное сглаживание шрифтов.
 - 🖱️ **Быстрое закрытие**: Клик в любое место страницы вне окна или нажатие клавиши <kbd>Esc</kbd>.
 - ⚙️ **Всплывающее меню настроек и два режима работы**:
@@ -163,24 +158,19 @@ git clone https://github.com/PheromoneItsMe/quick-web-translator.git
 | Действие | Как выполнить |
 | :--- | :--- |
 | **Перевести текст** | Выделите любой английский текст мышкой или клавиатурой |
+| **Закрепить / Открепить** | Нажмите иконку 📌 в шапке окна |
 | **Переместить окно** | Зажмите левой кнопкой мыши верхнюю панель окна и перетаскивайте |
-| **Изменить размер** | Потяните за нижний правый угол или границы окна |
+| **Изменить размер** | Потяните за любую из 4 границ или 4 углов (8 направлений) |
 | **Озвучить / Остановить** | Нажмите 🔊 для старта, нажмите ⏹️ для остановки |
 | **Скопировать перевод** | Нажмите иконку копирования 📋 в шапке окна |
 | **Закрыть окно** | Кликните в любое место вне окна или нажмите <kbd>Esc</kbd> |
 
 ---
 
-## 🚀 Что нового в версии 1.3.0
+## 🚀 Что нового в версии 1.4.0
 
-- 🧠 **Умная автокоррекция смешанного текста**: Исправлен баг, когда при выделении английского текста со сносками, цитатами или примечаниями на другом языке встроенный автоопределитель языка определял весь фрагмент как русский и возвращал английские слова без перевода. Сервисный воркер теперь автоматически распознаёт такие случаи и повторно запрашивает перевод с английского на русский.
-- 🎯 **Синхронное отслеживание прокрутки и ресайза (Scroll Tracking)**: Плавающая кнопка-триггер теперь плавно и точно в реальном времени следует за выделенным текстом при скролле страницы или внутренних прокручиваемых блоков (`overflow: auto/scroll`) с использованием `requestAnimationFrame`.
-- 🛡️ **Универсальная система защиты от перекрытий (Occlusion & Clipping Detection)**:
-  - Автоматически распознает, когда выделенный текст уходит под фиксированные шапки, панели навигации или тулбары (например, поле ввода сообщений в Google Gemini `<input-container>` или верхнюю панель поиска YouTube `#masthead`) с помощью попиксельного hit-тестирования (`document.elementsFromPoint`).
-  - Аккуратно скрывает кнопку, если текст перекрыт сторонними панелями или вышел за границы родительского скролл-контейнера, исключая наслоение кнопки на элементы управления сайта.
-  - Мгновенно восстанавливает видимость кнопки, как только текст возвращается в видимую область.
-- 🔄 **Адаптивное размещение кнопки**: Автоматически проверяет доступное свободное пространство и переворачивает кнопку вверх (`top - 28px`) или вниз (`bottom + 6px`), чтобы она не вылезала за экран и не попадала под верхние фиксированные панели.
-- ⚡ **Оптимизация жизненного цикла выделения**: Мгновенное удаление кнопки при снятии выделения или клике в сторону, исключающее появление остаточных элементов интерфейса.
+- 🪟 **Изменение размера окна во всех 8 направлениях (как в Windows)**: Окно перевода теперь можно плавно растягивать и сжимать со всех 4 сторон (сверху, снизу, слева, справа) и со всех 4 углов, точно так же, как стандартные окна в операционной системе Windows.
+- 📌 **Кнопка «Закрепить окно» (Pin Window)**: В шапку окна добавлена кнопка закрепления. При включении окно остаётся зафиксированным на экране и не закрывается при клике в сторону, а при выделении любого нового текста перевод динамически обновляется прямо в нём.
 
 ---
 
