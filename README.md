@@ -4,7 +4,7 @@
 
 **A fast, elegant, and distraction-free standalone browser extension (Manifest V3) for instant English-to-Russian translation on any webpage.**
 
-[![Version](https://img.shields.io/badge/Version-1.4.0-blueviolet.svg?style=flat-square)](manifest.json)
+[![Version](https://img.shields.io/badge/Version-1.4.1-blueviolet.svg?style=flat-square)](manifest.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Manifest V3](https://img.shields.io/badge/Extension-Manifest%20V3-indigo.svg?style=flat-square)](manifest.json)
 [![Supported Browsers](https://img.shields.io/badge/Browser-Brave%20%7C%20Chrome%20%7C%20Edge%20%7C%20Firefox-purple.svg?style=flat-square)]()
@@ -21,7 +21,7 @@
 # English Version
 
 > [!NOTE]
-> **Standalone Extension (v1.4.0)**: Quick Web Translator is built as a native **Manifest V3 Browser Extension**. It runs directly in Brave, Chrome, Edge, and other Chromium-based browsers without requiring any userscript manager.
+> **Standalone Extension (v1.4.1)**: Quick Web Translator is built as a native **Manifest V3 Browser Extension**. It runs directly in Brave, Chrome, Edge, and other Chromium-based browsers without requiring any userscript manager.
 
 ## ✨ Features
 
@@ -98,17 +98,16 @@ flowchart LR
 
 ---
 
-## 🚀 What's New in v1.4.0
+## 🚀 What's New in v1.4.1
 
-- 🪟 **Windows-Style 8-Directional Resizing**: The translation popup window can now be freely resized from all 4 borders (top, bottom, left, right) and all 4 corners (top-left, top-right, bottom-left, bottom-right), providing full desktop-like resizing flexibility.
-- 📌 **Pin Window ("Закрепить окно")**: Added a dedicated pin button in the header. When pinned, the window stays in place anywhere on your screen while dynamically updating the translation as you highlight new text, protected from accidental outside-click dismissal.
+- 🛡️ **Fixed Trigger Button Visibility & Occlusion Bug**: Fixed an issue where selecting text of varying lengths (e.g. adding or removing a single word) or highlighting specific elements like YouTube video titles and multi-line transcripts caused the floating trigger button to intermittently disappear. The occlusion engine now accurately distinguishes true fixed/sticky navigation overlays from normal page elements, and anchors trigger positioning directly to the end of multi-line selections.
 
 ---
 
 # Russian Version / Русская версия
 
 > [!NOTE]
-> **Автономное расширение (v1.4.0)**: Quick Web Translator создан как нативное **браузерное расширение (Manifest V3)**. Оно работает напрямую в Brave, Chrome, Edge и других браузерах и **не требует** сторонних менеджеров скриптов (Tampermonkey).
+> **Автономное расширение (v1.4.1)**: Quick Web Translator создан как нативное **браузерное расширение (Manifest V3)**. Оно работает напрямую в Brave, Chrome, Edge и других браузерах и **не требует** сторонних менеджеров скриптов (Tampermonkey).
 
 ## ✨ Возможности
 
@@ -167,10 +166,9 @@ git clone https://github.com/PheromoneItsMe/quick-web-translator.git
 
 ---
 
-## 🚀 Что нового в версии 1.4.0
+## 🚀 Что нового в версии 1.4.1
 
-- 🪟 **Изменение размера окна во всех 8 направлениях (как в Windows)**: Окно перевода теперь можно плавно растягивать и сжимать со всех 4 сторон (сверху, снизу, слева, справа) и со всех 4 углов, точно так же, как стандартные окна в операционной системе Windows.
-- 📌 **Кнопка «Закрепить окно» (Pin Window)**: В шапку окна добавлена кнопка закрепления. При включении окно остаётся зафиксированным на экране и не закрывается при клике в сторону, а при выделении любого нового текста перевод динамически обновляется прямо в нём.
+- 🛡️ **Исправлен баг скрытия кнопки-триггера при выделении**: Устранена ошибка, из-за которой при изменении длины выделенного текста (даже на одно слово) или выделении определённых блоков (например, заголовков видео на YouTube и строк транскрипта) плавающая кнопка перевода могла внезапно исчезать. Система проверки перекрытий теперь точно распознаёт настоящие фиксированные шапки и модальные окна, не конфликтуя с соседними элементами страницы, а кнопка корректно привязывается к концу многострочного выделения.
 
 ---
 

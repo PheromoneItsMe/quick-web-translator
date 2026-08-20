@@ -1069,6 +1069,39 @@
         return false;
     }
 
+    function isElementOccluding(el, container) {
+        if (!el || isOurElement(el)) return false;
+        if (container && (el === container || container.contains(el) || el.contains(container))) {
+            return false;
+        }
+
+        // Walk up from el to see if it is inside a truly occluding layer (e.g. fixed/sticky header, modal, dialog)
+        let current = el;
+        while (current && current !== document.body && current !== document.documentElement) {
+            if (container && (current === container || container.contains(current))) {
+                return false;
+            }
+
+            try {
+                const style = window.getComputedStyle(current);
+                const pos = style.position;
+                if (pos === 'fixed' || pos === 'sticky') {
+                    return true;
+                }
+                if (current.tagName === 'DIALOG' || current.getAttribute('role') === 'dialog' || current.getAttribute('aria-modal') === 'true') {
+                    return true;
+                }
+                if (pos === 'absolute' && parseInt(style.zIndex, 10) >= 1000) {
+                    return true;
+                }
+            } catch (e) {}
+
+            current = current.parentElement;
+        }
+
+        return false;
+    }
+
     function isPointOccluded(x, y, container) {
         if (x < 0 || x > window.innerWidth || y < 0 || y > window.innerHeight) {
             return true;
@@ -1083,22 +1116,13 @@
 
         if (!elements || elements.length === 0) return false;
 
-        let topEl = null;
         for (let i = 0; i < elements.length; i++) {
             const el = elements[i];
-            if (!isOurElement(el)) {
-                topEl = el;
-                break;
-            }
-        }
+            if (isOurElement(el)) continue;
 
-        if (!topEl) return false;
-
-        if (container) {
-            if (topEl === container || container.contains(topEl) || topEl.contains(container)) {
-                return false;
+            if (isElementOccluding(el, container)) {
+                return true;
             }
-            return true;
         }
 
         return false;
@@ -1116,18 +1140,20 @@
         if (container) {
             let current = container.parentElement;
             while (current && current !== document.body && current !== document.documentElement) {
-                const style = window.getComputedStyle(current);
-                const overflowY = style.overflowY;
-                const overflowX = style.overflowX;
-                if (overflowY === 'hidden' || overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'clip' ||
-                    overflowX === 'hidden' || overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'clip') {
-                    const parentRect = current.getBoundingClientRect();
-                    // If selection is fully scrolled out of this scrollable parent container:
-                    if (rect.bottom <= parentRect.top + 1 || rect.top >= parentRect.bottom - 1 ||
-                        rect.right <= parentRect.left + 1 || rect.left >= parentRect.right - 1) {
-                        return true;
+                try {
+                    const style = window.getComputedStyle(current);
+                    const overflowY = style.overflowY;
+                    const overflowX = style.overflowX;
+                    if (overflowY === 'hidden' || overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'clip' ||
+                        overflowX === 'hidden' || overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'clip') {
+                        const parentRect = current.getBoundingClientRect();
+                        // If selection is fully scrolled out of this scrollable parent container:
+                        if (rect.bottom <= parentRect.top + 1 || rect.top >= parentRect.bottom - 1 ||
+                            rect.right <= parentRect.left + 1 || rect.left >= parentRect.right - 1) {
+                            return true;
+                        }
                     }
-                }
+                } catch (e) {}
                 current = current.parentElement;
             }
         }
@@ -1192,32 +1218,42 @@
             return;
         }
 
-        // Calculate preferred position
-        let left = (typeof rect.right === 'number') ? rect.right + 4 : lastPointerPos.x + 8;
-        let top = (typeof rect.top === 'number') ? rect.top - 28 : lastPointerPos.y - 28;
-
-        // If placing above would hit top screen edge or is occluded by a top header/bar, place below
-        if (top < 8 || isPointOccluded(left + 13, top + 13, container)) {
-            top = (typeof rect.bottom === 'number') ? rect.bottom + 6 : lastPointerPos.y + 12;
+        // Determine the best anchor rect: use the last line's clientRect if multi-line
+        let anchorRect = rect;
+        if (range) {
+            try {
+                const rects = range.getClientRects();
+                if (rects && rects.length > 0) {
+                    for (let i = rects.length - 1; i >= 0; i--) {
+                        if (rects[i].width > 0 && rects[i].height > 0) {
+                            anchorRect = rects[i];
+                            break;
+                        }
+                    }
+                }
+            } catch (e) {}
         }
 
-        // If placing below is ALSO occluded (e.g. text is near a bottom bar), check if top was better
-        if (isPointOccluded(left + 13, top + 13, container)) {
-            const altTop = (typeof rect.top === 'number') ? rect.top - 28 : top;
-            if (!isPointOccluded(left + 13, altTop + 13, container) && altTop >= 8) {
-                top = altTop;
-            } else {
-                // Both button positions are occluded by fixed/sticky elements
-                triggerBtnElement.style.display = 'none';
-                return;
+        const btnWidth = 26;
+        const btnHeight = 26;
+
+        // Calculate preferred position: to the right and slightly below the end of the selection
+        let left = (typeof anchorRect.right === 'number') ? anchorRect.right + 4 : lastPointerPos.x + 8;
+        let top = (typeof anchorRect.bottom === 'number') ? anchorRect.bottom + 4 : lastPointerPos.y + 12;
+
+        // If placing below exceeds the bottom of the viewport or is occluded by a fixed bottom bar, place above
+        if (top + btnHeight > window.innerHeight - 6 || isPointOccluded(left + btnWidth / 2, top + btnHeight / 2, container)) {
+            const aboveTop = (typeof anchorRect.top === 'number') ? anchorRect.top - btnHeight - 4 : lastPointerPos.y - btnHeight - 8;
+            if (aboveTop >= 6 && !isPointOccluded(left + btnWidth / 2, aboveTop + btnHeight / 2, container)) {
+                top = aboveTop;
+            } else if (top + btnHeight > window.innerHeight - 6) {
+                top = Math.max(6, window.innerHeight - btnHeight - 6);
             }
         }
 
-        // Clamp button within viewport screen
-        if (left + 30 > window.innerWidth) left = window.innerWidth - 34;
-        if (left < 6) left = 6;
-        if (top < 6) top = 6;
-        if (top + 30 > window.innerHeight) top = window.innerHeight - 34;
+        // Clamp button within viewport screen margins
+        left = Math.max(6, Math.min(window.innerWidth - btnWidth - 6, left));
+        top = Math.max(6, Math.min(window.innerHeight - btnHeight - 6, top));
 
         triggerBtnElement.style.display = 'flex';
         triggerBtnElement.style.left = `${Math.round(left)}px`;

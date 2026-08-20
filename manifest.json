@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Quick Web Translator (En -> Ru)",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Instant English-to-Russian translation of selected text with audio pronunciation, resizable window, and dark theme for Brave and Chrome.",
   "author": "Pheromone",
   "permissions": [
